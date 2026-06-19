@@ -15,7 +15,7 @@ Basic GPIO output - blinking the onboard LED (PA5).
 - GPIO mode configuration (MODER)
 - Bitwise register manipulation
 
-## 02_UART_Hello_World
+## 02_UART_Hello
 Sending text from the STM32 to a PC terminal over UART.
 
 **Concepts covered:**
