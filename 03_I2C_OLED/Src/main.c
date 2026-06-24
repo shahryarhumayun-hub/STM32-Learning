@@ -67,6 +67,29 @@ typedef struct{
 
 int main(void){
 
+	GPIOB->MODER &= ~(3 << 16);
+	GPIOB->MODER |= (2 << 16);
+
+	GPIOB->MODER &= ~(3 << 18);
+	GPIOB->MODER |= (2 << 18);
+
+	GPIOB->AFR[1] &= ~(0xF << 0);
+	GPIOB->AFR[1] |= (4 << 0);
+
+	GPIOB->AFR[1] &= ~(0xF << 1);
+	GPIOB->AFR[1] |= (4 << 1);
+
+	GPIOB->OTYPER &= ~(1 << 8);
+	GPIOB->OTYPER |= (1 << 8);
+
+	GPIOB->OTYPER &= ~(1 << 9);
+	GPIOB->OTYPER |= (1 << 9);
+
+	GPIOB->OSPEEDER &= ~(3 << 16);
+	GPIOB->OSPEEDER |= (3 << 16);
+
+	GPIOB->OSPEEDER &= ~(3 << 18);
+	GPIOB->OSPEEDER |= (3 << 18);
 
 	for(;;){
 
