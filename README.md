@@ -25,6 +25,9 @@ Sending text from the STM32 to a PC terminal over UART.
 - Status register polling
 - C pointers and string handling
 
+## 03_I2C_OLED
+*Work in progress*
+
 ## Tools
 - STM32CubeIDE
 - STM32F446 Reference Manual (RM0390)
