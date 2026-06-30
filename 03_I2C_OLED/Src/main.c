@@ -33,7 +33,7 @@ typedef struct{
 typedef struct{
 	volatile uint32_t MODER;
 	volatile uint32_t OTYPER;
-	volatile uint32_t OSPEEDER;
+	volatile uint32_t OSPEEDR;
 	volatile uint32_t PUPDR;
 	volatile uint32_t IDR;
 	volatile uint32_t ODR;
@@ -61,35 +61,75 @@ typedef struct{
 #define I2C1 ((I2C_Typedef *) I2C1_BASE)
 
 /* ========================= Bit definitions =========================*/
+
+/* RCC */
 #define RCC_AHB1ENR_GPIOBEN (1U << 1)
-#define RCC_APB1ENR_I2C1EN (1U << 21)
+#define RCC_APB1ENR_I2C1EN 	(1U << 21)
+
+/* GPIO */
+#define GPIO_MODER_AF 		(2U)
+#define GPIO_MODER_RESET 	(3U) //for setting MODER pins to 00 first
+#define GPIO_OTYPER_OD 		(1U)
+#define GPIO_AFR_AF4		(4U)
+#define GPIO_OSPEEDR_HIGH	(3U)
+
+/* I2C */
+#define I2C_CR1_PE		(1U << 0)
+#define I2C_CR1_START	(1U << 8)
+#define I2C_CR1_STOP	(1U << 9)
+#define I2C_CR1_ACK		(1U << 10)
+#define I2C_CR2_FREQ    (16U << 0)
+#define I2C_SR1_SB      (1U << 0)
+#define I2C_SR1_ADDR	(1U << 1)
+#define I2C_SR1_TXE		(1U << 7)
+#define I2C_SR1_BTF		(1U << 2)
+
 
 
 int main(void){
+	RCC->AHB1ENR |= RCC_AHB1ENR_GPIOBEN;
+	RCC->APB1ENR |= RCC_APB1ENR_I2C1EN;
 
-	GPIOB->MODER &= ~(3 << 16);
-	GPIOB->MODER |= (2 << 16);
+	GPIOB->MODER &= ~(GPIO_MODER_RESET << 16);
+	GPIOB->MODER |= (GPIO_MODER_AF << 16);
 
-	GPIOB->MODER &= ~(3 << 18);
-	GPIOB->MODER |= (2 << 18);
+	GPIOB->MODER &= ~(GPIO_MODER_RESET << 18);
+	GPIOB->MODER |= (GPIO_MODER_AF << 18);
 
 	GPIOB->AFR[1] &= ~(0xF << 0);
-	GPIOB->AFR[1] |= (4 << 0);
+	GPIOB->AFR[1] |= (GPIO_AFR_AF4 << 0);
 
-	GPIOB->AFR[1] &= ~(0xF << 1);
-	GPIOB->AFR[1] |= (4 << 1);
+	GPIOB->AFR[1] &= ~(0xF << 4);
+	GPIOB->AFR[1] |= (GPIO_AFR_AF4 << 4);
 
 	GPIOB->OTYPER &= ~(1 << 8);
-	GPIOB->OTYPER |= (1 << 8);
+	GPIOB->OTYPER |= (GPIO_OTYPER_OD << 8);
 
 	GPIOB->OTYPER &= ~(1 << 9);
-	GPIOB->OTYPER |= (1 << 9);
+	GPIOB->OTYPER |= (GPIO_OTYPER_OD << 9);
 
-	GPIOB->OSPEEDER &= ~(3 << 16);
-	GPIOB->OSPEEDER |= (3 << 16);
+	GPIOB->OSPEEDR &= ~(3 << 16);
+	GPIOB->OSPEEDR |= (GPIO_OSPEEDR_HIGH << 16);
 
-	GPIOB->OSPEEDER &= ~(3 << 18);
-	GPIOB->OSPEEDER |= (3 << 18);
+	GPIOB->OSPEEDR &= ~(3 << 18);
+	GPIOB->OSPEEDR |= (GPIO_OSPEEDR_HIGH << 18);
+
+	// Start by disabling the peripheral so that we are able to edit
+	I2C1->CR1 &= ~I2C_CR1_PE;
+
+	// Set APB1 clock frequency in Mhz (16Mhz)
+	I2C1->CR2 |= I2C_CR2_FREQ;
+
+	// Set clock control register for 100khz standard mode
+	// CCR = 16 000 000 / (2 * 100 000) = 80
+	I2C1->CCR = 80U;
+
+	// Set maximum rise time
+	// TRISE = (1000ns * 16MHz) + 1 = 17
+	I2C1->TRISE = 17U;
+
+	// Enable peripheral
+	I2C1->CR1 |= I2C_CR1_PE;
 
 	for(;;){
 
