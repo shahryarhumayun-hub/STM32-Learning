@@ -26,7 +26,10 @@ Sending text from the STM32 to a PC terminal over UART.
 - C pointers and string handling
 
 ## 03_I2C_OLED
-*Work in progress*
+*Work in progress, waiting for components*
+
+## 04_ADC_Potentionmeter
+Basic analog to digital converter with digital ouput on PC terminal over UART.
 
 ## Tools
 - STM32CubeIDE

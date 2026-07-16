@@ -84,7 +84,100 @@ typedef struct{
 #define I2C_SR1_TXE		(1U << 7)
 #define I2C_SR1_BTF		(1U << 2)
 
+/* Functions */
 
+void i2c_start(void)
+{
+    I2C1->CR1 |= I2C_CR1_START;
+    while(!(I2C1->SR1 & I2C_SR1_SB));
+}
+
+void i2c_stop(void)
+{
+    I2C1->CR1 |= I2C_CR1_STOP;
+}
+
+void i2c_write_address(uint8_t address)
+{
+    I2C1->DR = address << 1;  // shift left 1, bit 0 = 0 (write)
+    while(!(I2C1->SR1 & I2C_SR1_ADDR));
+    (void)I2C1->SR2;  // clear ADDR flag by reading SR2
+}
+
+void i2c_write_byte(uint8_t data)
+{
+    while(!(I2C1->SR1 & I2C_SR1_TXE));
+    I2C1->DR = data;
+}
+
+void ssd1306_send_command(uint8_t command)
+{
+    i2c_start();
+    i2c_write_address(0x3C);
+    i2c_write_byte(0x00);      // control byte - command mode
+    i2c_write_byte(command);   // the actual command
+    i2c_stop();
+}
+
+void ssd1306_init(void)
+{
+    // Turn display off during configuration
+    ssd1306_send_command(0xAE);
+
+    // Set display clock divide ratio
+    ssd1306_send_command(0xD5);
+    ssd1306_send_command(0x80);
+
+    // Set multiplex ratio (64 rows)
+    ssd1306_send_command(0xA8);
+    ssd1306_send_command(0x3F);
+
+    // Set display offset
+    ssd1306_send_command(0xD3);
+    ssd1306_send_command(0x00);
+
+    // Set start line
+    ssd1306_send_command(0x40);
+
+    // Enable charge pump
+    ssd1306_send_command(0x8D);
+    ssd1306_send_command(0x14);
+
+    // Set memory addressing mode to horizontal
+    ssd1306_send_command(0x20);
+    ssd1306_send_command(0x00);
+
+    // Set segment remap
+    ssd1306_send_command(0xA1);
+
+    // Set COM output scan direction
+    ssd1306_send_command(0xC8);
+
+    // Set COM pins
+    ssd1306_send_command(0xDA);
+    ssd1306_send_command(0x12);
+
+    // Set contrast
+    ssd1306_send_command(0x81);
+    ssd1306_send_command(0xCF);
+
+    // Set precharge period
+    ssd1306_send_command(0xD9);
+    ssd1306_send_command(0xF1);
+
+    // Set VCOMH deselect level
+    ssd1306_send_command(0xDB);
+    ssd1306_send_command(0x40);
+
+    // Display on from RAM
+    ssd1306_send_command(0xA4);
+
+    // Normal display (not inverted)
+    ssd1306_send_command(0xA6);
+
+    // Turn display on
+    ssd1306_send_command(0xAF);
+}
 
 int main(void){
 	RCC->AHB1ENR |= RCC_AHB1ENR_GPIOBEN;
@@ -114,6 +207,7 @@ int main(void){
 	GPIOB->OSPEEDR &= ~(3 << 18);
 	GPIOB->OSPEEDR |= (GPIO_OSPEEDR_HIGH << 18);
 
+	/* I2C initialization */
 	// Start by disabling the peripheral so that we are able to edit
 	I2C1->CR1 &= ~I2C_CR1_PE;
 
@@ -130,6 +224,10 @@ int main(void){
 
 	// Enable peripheral
 	I2C1->CR1 |= I2C_CR1_PE;
+
+	/* OLED initialization*/
+	ssd1306_init();
+
 
 	for(;;){
 
