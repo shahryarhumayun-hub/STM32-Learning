@@ -28,8 +28,15 @@ Sending text from the STM32 to a PC terminal over UART.
 ## 03_I2C_OLED
 *Work in progress, waiting for components*
 
-## 04_ADC_Potentionmeter
-Basic analog to digital converter with digital ouput on PC terminal over UART.
+## 04_ADC_Potentiometer
+Basic analog to digital converter with digital output on PC terminal over UART.
+
+**Concepts covered:**
+- ADC1 peripheral configuration and conversion
+- ADC noise and averaging/oversampling
+- Integer to string conversion in C
+- APB2 bus peripherals
+- continous sampling in main loop
 
 ## Tools
 - STM32CubeIDE

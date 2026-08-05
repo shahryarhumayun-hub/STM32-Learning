@@ -91,9 +91,42 @@ typedef struct{
 #define RCC_APB1ENR_USART2EN 	(1U << 17)
 #define RCC_APB2ENR_ADC1EN 		(1U << 8)
 
-#define GPIO_MODER_RESET 		(3U)
+#define GPIO_MODER_RESET 		(3U) // mask to clear 2 mode bits
+#define GPIO_MODER_ANALOG 		(3U) // mask to set analog mode
 #define GPIO_MODER_AF 			(2U)
-#define GPIO_MODER_ANALOG 		(3U)
+
+#define GPIO_AFR_AF7 			(7U)
+#define GPIO_AFR_RESET 			(0xFU)
+
+#define USART_SR_TXE 			(1U << 7)
+
+#define ADC_SR_EOC 				(1U << 1)
+#define ADC_CR2_SWSTART 		(1U << 30)
+#define ADC_CR2_ADON			(1U << 0)
+
+
+
+/* ========================== USART Functions ========================== */
+
+void uart_send_char(char c){
+	while(!(USART2->SR & USART_SR_TXE));
+	USART2->DR = c;
+}
+
+void uart_send_string(char *str){
+	while(*str){
+		uart_send_char(*str);
+		str++;
+	}
+}
+
+void uart_send_number(uint32_t number){
+	uart_send_char('0' + (number / 1000));
+	uart_send_char('0' + (number / 100) % 10);
+	uart_send_char('0' + (number / 10) % 10);
+	uart_send_char('0' + (number / 1) % 10);
+	uart_send_string("\r\n");
+}
 
 /* ========================== MAIN ========================== */
 int main(void){
@@ -102,15 +135,62 @@ int main(void){
 	RCC->APB1ENR |= RCC_APB1ENR_USART2EN;
 	RCC->APB2ENR |= RCC_APB2ENR_ADC1EN;
 
+	for(int i = 0; i < 1000; i++);
+
 	//Set PA1 to analog
 	GPIOA->MODER &= ~(GPIO_MODER_RESET << 2);
 	GPIOA->MODER |= (GPIO_MODER_ANALOG << 2);
 
-	//Set PA2 and PA3 to alternate function
-	GPIOA->MODER
+	//Set PA2 and PA3 to alternate function and configure to AF7
+	//PA2
+	GPIOA->MODER &= ~(GPIO_MODER_RESET << 4);
+	GPIOA->MODER |= (GPIO_MODER_AF << 4);
+	GPIOA->AFR[0] &= ~(GPIO_AFR_RESET << 8);
+	GPIOA->AFR[0] |= (GPIO_AFR_AF7 << 8);
+
+	//PA3
+	GPIOA->MODER &= ~(GPIO_MODER_RESET << 6);
+	GPIOA->MODER |= (GPIO_MODER_AF << 6);
+	GPIOA->AFR[0] &= ~(GPIO_AFR_RESET << 12);
+	GPIOA->AFR[0] |= (GPIO_AFR_AF7 << 12);
+
+/* ========================= USART2 configuration ========================= */
+	// Set the Baud Rate Register 139 which is 16MHz / 115200 baudrate.
+	USART2->BRR = 139;
+	// Set bit 3 to 1, enables transmission
+	USART2->CR1 |= (1 << 3);
+	// set bit 13 to 1, enables USART2
+	USART2->CR1 |= (1 << 13);
+
+	uart_send_string("USART config done!\r\n");
+
+
+/* ========================= ADC configuration ========================= */
+	// Set channel 1 in SQR3
+	ADC1->SQR3 = 1U;
+
+	// Enable ADC
+	ADC1->CR2 |= ADC_CR2_ADON;
+
+	for(int i = 0; i < 1000; i++);
 
 	for(;;){
 
+	uint32_t sum = 0;
+	for(int i = 0; i < 16; i++) {
+		// Start of the conversion
+		ADC1->CR2 |= ADC_CR2_SWSTART;
+
+		// Wait for the conversion to be done
+		while(!(ADC1->SR & ADC_SR_EOC));
+		sum += ADC1->DR;
+	}
+	uint32_t value = sum / 16;
+
+	// Reading output
+	uart_send_number(value);
+
+	for(int i = 0; i < 500000; i++);
 	}
 }
 
