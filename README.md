@@ -25,8 +25,7 @@ Sending text from the STM32 to a PC terminal over UART.
 - Status register polling
 - C pointers and string handling
 
-## 03_I2C_OLED
-*Work in progress, waiting for components*
+## 03_I2C_OLED *(Work in progress, waiting for components)*
 
 ## 04_ADC_Potentiometer
 Basic analog to digital converter with digital output on PC terminal over UART.
@@ -37,6 +36,15 @@ Basic analog to digital converter with digital output on PC terminal over UART.
 - Integer to string conversion in C
 - APB2 bus peripherals
 - continous sampling in main loop
+
+## 05_DS3231_RTC *(in progress)*
+Setting and reading real time from a DS3231 RTC module over I2C.
+
+**Concepts covered:**
+- I2C read and write transactions
+- BCD (Binary Coded Decimal) format
+- DS3231 register map
+- I2C device vs register addressing
 
 ## Tools
 - STM32CubeIDE
