@@ -1,6 +1,5 @@
 #include <stdint.h>
-
-/* ========================== Peripheral base addresses ========================== */
+/* ===================================================================================== Peripheral base addresses ===================================================================================== */
 #define PERIPH_BASE 	(0x40000000UL)
 #define AHB1PERIPH_BASE (PERIPH_BASE + 0x00020000UL)
 #define APB1PERIPH_BASE (PERIPH_BASE + 0x00000000UL)
@@ -11,7 +10,7 @@
 #define I2C1_BASE 		(APB1PERIPH_BASE + 0x00005400UL)
 #define USART2_BASE 	(APB1PERIPH_BASE + 0x00004400UL)
 
-/* ========================== Peripheral register structures ========================== */
+/* ===================================================================================== Peripheral register structures ===================================================================================== */
 typedef struct{
 	volatile uint32_t CR;
 	volatile uint32_t PLLCFGR;
@@ -67,7 +66,7 @@ typedef struct{
 	volatile uint32_t GTPR;
 }USART_Typedef;
 
-/* ========================== Peripheral pointers ========================== */
+/* ===================================================================================== Peripheral pointers ===================================================================================== */
 
 #define RCC 	((RCC_Typedef *) RCC_BASE)
 #define GPIOA ((GPIO_Typedef *) GPIOA_BASE)
@@ -75,7 +74,7 @@ typedef struct{
 #define USART2 	((USART_Typedef *) USART2_BASE)
 #define I2C1 	((I2C_Typedef *) I2C1_BASE)
 
-/* ========================== Bit definitions ========================== */
+/* ===================================================================================== Bit definitions ===================================================================================== */
 #define RCC_AHB1ENR_GPIOAEN 	(1U << 0)
 #define RCC_AHB1ENR_GPIOBEN 	(1U << 1)
 #define RCC_APB1ENR_USART2EN 	(1U << 17)
@@ -107,10 +106,14 @@ typedef struct{
 #define DS3231_ADDR		(0x68)
 #define DS3231_ADDR_W 	(DS3231_ADDR << 1)
 #define DS3231_ADDR_R	((DS3231_ADDR << 1) | 1U)
+#define DS3231_SR 		(0x00)
+#define DS3231_MR 		(0x01)
+#define DS3231_HR		(0x02)
 
-/* ============================================================== Functions ============================================================== */
 
-/* ========================== USART functions ========================== */
+/* ===================================================================================== Functions ===================================================================================== */
+
+/* ======================================== USART functions ======================================== */
 void uart_send_char(char c){
 	while(!(USART2->SR & USART_SR_TXE));
 	USART2->DR = c;
@@ -124,18 +127,33 @@ void uart_send_string(char *str){
 	}
 }
 
-void uart_send_uint8_binary(uint8_t value){
+/*
+Function takes a uint8 value and prints this binary value out the uart.
+it does this by checking each bit and depending on what it is writes 1 or 0 to the uart.
+*/
+void uart_send_uint8(uint8_t value){
 	for (int i = 7; i >= 0; i--)
 	{
-		if (value & 1 << i)
-			uart_send_string("1");
-		else uart_send_string("0");
+		if (value & (1U << i))
+			uart_send_char('1');
+		else
+			uart_send_char('0');
 	}
 	uart_send_string("\r\n");
 }
 
-void uart_send_uint8_decimal();
-/* ========================== I2C Functions ========================== */
+/*
+Function takes a uint8 value and prints it out uart in a decimal format.
+f.eks 00001110 = 14
+first it extracts 1 by dividing with 10 and then adds '0' to turn it into the ASCII value of 1.
+
+*/
+void uart_send_uint8_decimal(uint8_t value){
+	uart_send_char((value / 10) + '0');
+	uart_send_char((value % 10) + '0');
+}
+
+/* ======================================== I2C Functions ======================================== */
 void i2c_start(void){
 	I2C1->CR1 |= I2C_CR1_START;
 
@@ -161,7 +179,8 @@ void i2c_write_byte(uint8_t data){
 
 
 
-/* ========================== DS3231 Functions ========================== */
+
+/* ======================================== DS3231 Functions ======================================== */
 
 
 uint8_t decimal_to_bcd(uint8_t decimal){
@@ -174,6 +193,7 @@ uint8_t bcd_to_decimal(uint8_t bcd){
 	//     ^does this need to be here?^
 }
 
+
 void ds3231_set_time(uint8_t hours, uint8_t minutes, uint8_t seconds){
 	i2c_start();
 	i2c_send_address(DS3231_ADDR_W);
@@ -185,10 +205,37 @@ void ds3231_set_time(uint8_t hours, uint8_t minutes, uint8_t seconds){
 	uart_send_string("Time set!!!\r\n");
 }
 
-/*
-void ds3231_get_time(){
+
+void ds3231_print_time(uint8_t reg){
+    uint8_t time;
+
+    /* Tell DS3231 which register we want */
+    i2c_start();
+
+    i2c_send_address(DS3231_ADDR_W);
+
+    i2c_write_byte(reg);
+
+    /* Switch from write to read */
+    i2c_start();
+
+    i2c_send_address(DS3231_ADDR_R);
+
+    /* We only want one byte */
+    I2C1->CR1 &= ~I2C_CR1_ACK;
+
+    /* Wait for DS3231 to send it */
+    while (!(I2C1->SR1 & I2C_SR1_RXNE));
+
+    /* Read the byte */
+    time = I2C1->DR;
+
+    /* End transaction */
+    i2c_stop();
+
+    uart_send_uint8_decimal(bcd_to_decimal(time));
 }
-*/
+
 
 uint8_t ds3231_read_seconds(void)
 {
@@ -221,6 +268,7 @@ uint8_t ds3231_read_seconds(void)
     return seconds;
 }
 
+/* ===================================================================================== MAIN ===================================================================================== */
 int main (void){
 	// Enable clocks
 	RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
@@ -230,7 +278,7 @@ int main (void){
 
 	for(int i = 0; i < 1000; i++);
 
-/* ========================== USART2 configuration + GPIO ==========================*/
+/* ======================================== USART2 configuration + GPIO ======================================== */
 	//Set PA2 and PA3 to alternate function and configure to AF7
 	//PA2
 	GPIOA->MODER &= ~(GPIO_MODER_RESET << 4);
@@ -253,7 +301,7 @@ int main (void){
 
 	uart_send_string("USART configuration done!\r\n");
 
-/* ========================== I2C1 configuration + GPIO ========================== */
+/* ======================================== I2C1 configuration + GPIO ======================================== */
 	//PB8
 	GPIOB->MODER &= ~(GPIO_MODER_RESET << 16);
 	GPIOB->MODER |= (GPIO_MODER_AF << 16);
@@ -294,16 +342,17 @@ int main (void){
 	I2C1->CR1 |= (I2C_CR1_PE); //Enable I2C1
 	uart_send_string("I2C configuration done!\r\n");
 
-	/*
 
+	uart_send_string("\r\n");
 	ds3231_set_time(14, 15, 32);
-	uart_send_uint8(ds3231_read_seconds());
 
-	ds3231_set_time(14, 15, 52);
-	uart_send_uint8(ds3231_read_seconds());
-	*/
-
-	uart_send_uint8_binary(decimal_to_bcd(67) >> 4);
+	uart_send_string("Time: ");
+	ds3231_print_time(DS3231_HR);
+	uart_send_string(":");
+	ds3231_print_time(DS3231_MR);
+	uart_send_string(":");
+	ds3231_print_time(DS3231_SR);
+	uart_send_string("\r\n");
 
 	for(;;){
 	}
